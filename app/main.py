@@ -1,4 +1,5 @@
 from models.area import Area
+from models.metric import Metric
 
 print("=== LifeOps ===")
 
@@ -10,6 +11,19 @@ areas = [
     Area("Personal", "Personal goals")
 ]
 
+print("\nAREAS")
+print("======================")
+
 for area in areas:
     area.display()
     print("-------------------")
+
+study_hours = Metric(
+    "Study Hours",
+    "Hours"
+)
+
+print("\nMETRIC")
+print("======================")
+
+study_hours.display()
