@@ -6,6 +6,7 @@ from models.metric_entry import MetricEntry
 
 from services.dashboard import Dashboard
 from services.lifeops_app import LifeOpsApp
+from services.metrics_service import MetricsService
 
 from database.storage import Storage
 
@@ -35,8 +36,13 @@ def main():
     )
 
     study_hours.add_entry(3)
+    storage.save_metric_entry("Study Hours", 3)
+
     study_hours.add_entry(5)
+    storage.save_metric_entry("Study Hours", 5)
+
     study_hours.add_entry(2)
+    storage.save_metric_entry("Study Hours", 2)
 
     app.add_metric(study_hours)
 
@@ -88,14 +94,51 @@ def main():
 
     study_entry.display()
 
+    metrics_service = MetricsService()
+
     dashboard = Dashboard()
 
     dashboard.display(study_hours)
+
+    print("\nMETRIC STATISTICS")
+    print("======================")
+
+    print(
+        f"Average: {metrics_service.calculate_average(study_hours):.2f}"
+    )
+
+    print(
+        f"Max: {metrics_service.get_max(study_hours)}"
+    )
+
+    print(
+        f"Min: {metrics_service.get_min(study_hours)}"
+    )
+
+    print(
+        f"Count: {metrics_service.get_count(study_hours)}"
+    )
 
     print("\nDATABASE")
     print("======================")
 
     storage.show_metrics()
+
+    print("\nMETRIC ENTRIES")
+    print("======================")
+
+    storage.show_metric_entries()
+
+    print("\nSQL AVERAGE")
+    print("======================")
+
+    average = storage.get_metric_average(
+        "Study Hours"
+    )
+
+    print(
+        f"Average from SQLite: {average:.2f}"
+    )
 
     app.summary()
 
