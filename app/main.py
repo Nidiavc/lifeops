@@ -7,9 +7,14 @@ from models.metric_entry import MetricEntry
 from services.dashboard import Dashboard
 from services.lifeops_app import LifeOpsApp
 
+from database.storage import Storage
+
 
 def main():
     print("=== LifeOps ===")
+
+    storage = Storage()
+    storage.create_tables()
 
     app = LifeOpsApp()
 
@@ -34,6 +39,8 @@ def main():
     study_hours.add_entry(2)
 
     app.add_metric(study_hours)
+
+    storage.save_metric(study_hours)
 
     lifeops_start = Event(
         "LifeOps Started",
@@ -84,6 +91,11 @@ def main():
     dashboard = Dashboard()
 
     dashboard.display(study_hours)
+
+    print("\nDATABASE")
+    print("======================")
+
+    storage.show_metrics()
 
     app.summary()
 
