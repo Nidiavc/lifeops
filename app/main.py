@@ -4,9 +4,14 @@ from models.event import Event
 from models.goal import Goal
 from models.metric_entry import MetricEntry
 
+from services.dashboard import Dashboard
+from services.lifeops_app import LifeOpsApp
+
 
 def main():
     print("=== LifeOps ===")
+
+    app = LifeOpsApp()
 
     areas = [
         Area("Health", "Health and wellness"),
@@ -16,12 +21,8 @@ def main():
         Area("Personal", "Personal goals"),
     ]
 
-    print("\nAREAS")
-    print("======================")
-
     for area in areas:
-        area.display()
-        print("-------------------")
+        app.add_area(area)
 
     study_hours = Metric(
         "Study Hours",
@@ -32,40 +33,59 @@ def main():
     study_hours.add_entry(5)
     study_hours.add_entry(2)
 
-    print("\nMETRIC")
-    print("======================")
-
-    study_hours.display()
+    app.add_metric(study_hours)
 
     lifeops_start = Event(
         "LifeOps Started",
         "Beginning of the LifeOps project"
     )
 
-    print("\nEVENT")
-    print("======================")
-
-    lifeops_start.display()
+    app.add_event(lifeops_start)
 
     power_bi_goal = Goal(
         "Get Power BI Certification",
         35
     )
 
-    print("\nGOAL")
-    print("======================")
-
-    power_bi_goal.display()
+    app.add_goal(power_bi_goal)
 
     study_entry = MetricEntry(
         "Study Hours",
         3
     )
 
+    print("\nAREAS")
+    print("======================")
+
+    for area in app.areas:
+        area.display()
+        print("-------------------")
+
+    print("\nMETRIC")
+    print("======================")
+
+    study_hours.display()
+
+    print("\nEVENT")
+    print("======================")
+
+    lifeops_start.display()
+
+    print("\nGOAL")
+    print("======================")
+
+    power_bi_goal.display()
+
     print("\nMETRIC ENTRY")
     print("======================")
 
     study_entry.display()
+
+    dashboard = Dashboard()
+
+    dashboard.display(study_hours)
+
+    app.summary()
 
 
 if __name__ == "__main__":
