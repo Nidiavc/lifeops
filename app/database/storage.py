@@ -35,7 +35,65 @@ class Storage:
 
         self.connection.commit()
 
+    # ==========================
+    # EXISTS
+    # ==========================
+
+    def metric_exists(self, metric_name):
+
+        result = self.cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM metrics
+            WHERE name = ?
+            """,
+            (metric_name,)
+        )
+
+        return result.fetchone()[0] > 0
+
+    def goal_exists(self, title):
+
+        result = self.cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM goals
+            WHERE title = ?
+            """,
+            (title,)
+        )
+
+        return result.fetchone()[0] > 0
+
+    def metric_entry_exists(
+        self,
+        metric_name,
+        value
+    ):
+
+        result = self.cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM metric_entries
+            WHERE metric_name = ?
+            AND value = ?
+            """,
+            (
+                metric_name,
+                value
+            )
+        )
+
+        return result.fetchone()[0] > 0
+
+    # ==========================
+    # SAVE
+    # ==========================
+
     def save_metric(self, metric):
+
+        if self.metric_exists(metric.name):
+            return
 
         self.cursor.execute(
             """
@@ -49,19 +107,38 @@ class Storage:
 
         print(f"Metric saved: {metric.name}")
 
-    def save_metric_entry(self, metric_name, value):
+    def save_metric_entry(
+        self,
+        metric_name,
+        value
+    ):
+
+        if self.metric_entry_exists(
+            metric_name,
+            value
+        ):
+            return
 
         self.cursor.execute(
             """
-            INSERT INTO metric_entries(metric_name, value)
+            INSERT INTO metric_entries(
+                metric_name,
+                value
+            )
             VALUES (?, ?)
             """,
-            (metric_name, value)
+            (
+                metric_name,
+                value
+            )
         )
 
         self.connection.commit()
 
     def save_goal(self, goal):
+
+        if self.goal_exists(goal.title):
+            return
 
         self.cursor.execute(
             """
@@ -74,6 +151,10 @@ class Storage:
         self.connection.commit()
 
         print(f"Goal saved: {goal.title}")
+
+    # ==========================
+    # SHOW
+    # ==========================
 
     def show_metrics(self):
 
@@ -101,6 +182,10 @@ class Storage:
 
         for row in results:
             print(row)
+
+    # ==========================
+    # METRIC STATS
+    # ==========================
 
     def get_metric_average(self, metric_name):
 
@@ -134,6 +219,10 @@ class Storage:
             return row[0]
 
         return 0
+
+    # ==========================
+    # GOAL STATS
+    # ==========================
 
     def get_goal_average_progress(self):
 
