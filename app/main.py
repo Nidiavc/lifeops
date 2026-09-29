@@ -5,6 +5,7 @@ from models.goal import Goal
 from models.metric_entry import MetricEntry
 
 from services.dashboard import Dashboard
+from services.summary_dashboard import SummaryDashboard
 from services.lifeops_app import LifeOpsApp
 from services.metrics_service import MetricsService
 
@@ -30,6 +31,10 @@ def main():
     for area in areas:
         app.add_area(area)
 
+    # -------------------------
+    # STUDY HOURS
+    # -------------------------
+
     study_hours = Metric(
         "Study Hours",
         "Hours"
@@ -48,12 +53,42 @@ def main():
 
     storage.save_metric(study_hours)
 
+    # -------------------------
+    # SLEEP HOURS
+    # -------------------------
+
+    sleep_hours = Metric(
+        "Sleep Hours",
+        "Hours"
+    )
+
+    sleep_hours.add_entry(7)
+    storage.save_metric_entry("Sleep Hours", 7)
+
+    sleep_hours.add_entry(8)
+    storage.save_metric_entry("Sleep Hours", 8)
+
+    sleep_hours.add_entry(6)
+    storage.save_metric_entry("Sleep Hours", 6)
+
+    app.add_metric(sleep_hours)
+
+    storage.save_metric(sleep_hours)
+
+    # -------------------------
+    # EVENT
+    # -------------------------
+
     lifeops_start = Event(
         "LifeOps Started",
         "Beginning of the LifeOps project"
     )
 
     app.add_event(lifeops_start)
+
+    # -------------------------
+    # GOAL
+    # -------------------------
 
     power_bi_goal = Goal(
         "Get Power BI Certification",
@@ -62,10 +97,20 @@ def main():
 
     app.add_goal(power_bi_goal)
 
+    storage.save_goal(power_bi_goal)
+
+    # -------------------------
+    # METRIC ENTRY
+    # -------------------------
+
     study_entry = MetricEntry(
         "Study Hours",
         3
     )
+
+    # -------------------------
+    # OUTPUT
+    # -------------------------
 
     print("\nAREAS")
     print("======================")
@@ -74,10 +119,14 @@ def main():
         area.display()
         print("-------------------")
 
-    print("\nMETRIC")
+    print("\nMETRICS")
     print("======================")
 
     study_hours.display()
+
+    print()
+
+    sleep_hours.display()
 
     print("\nEVENT")
     print("======================")
@@ -98,25 +147,24 @@ def main():
 
     dashboard = Dashboard()
 
+    print("\nDASHBOARD")
+    print("======================")
+
     dashboard.display(study_hours)
+
+    dashboard.display(sleep_hours)
 
     print("\nMETRIC STATISTICS")
     print("======================")
 
     print(
-        f"Average: {metrics_service.calculate_average(study_hours):.2f}"
+        f"Study Average: "
+        f"{metrics_service.calculate_average(study_hours):.2f}"
     )
 
     print(
-        f"Max: {metrics_service.get_max(study_hours)}"
-    )
-
-    print(
-        f"Min: {metrics_service.get_min(study_hours)}"
-    )
-
-    print(
-        f"Count: {metrics_service.get_count(study_hours)}"
+        f"Sleep Average: "
+        f"{metrics_service.calculate_average(sleep_hours):.2f}"
     )
 
     print("\nDATABASE")
@@ -129,6 +177,45 @@ def main():
 
     storage.show_metric_entries()
 
+    print("\nGOALS")
+    print("======================")
+
+    storage.show_goals()
+
+    print("\nGOAL STATISTICS")
+    print("======================")
+
+    print(
+        f"Average Goal Progress: "
+        f"{storage.get_goal_average_progress():.2f}"
+    )
+
+    print(
+        f"Goal Count: "
+        f"{storage.get_goal_count()}"
+    )
+
+    print(
+        f"Max Goal Progress: "
+        f"{storage.get_goal_max_progress()}"
+    )
+
+    print(
+        f"Min Goal Progress: "
+        f"{storage.get_goal_min_progress()}"
+    )
+
+    print("\nLATEST METRIC VALUE")
+    print("======================")
+
+    latest_value = storage.get_metric_latest_value(
+        "Study Hours"
+    )
+
+    print(
+        f"Last Recorded Study Value: {latest_value}"
+    )
+
     print("\nSQL AVERAGE")
     print("======================")
 
@@ -137,7 +224,22 @@ def main():
     )
 
     print(
-        f"Average from SQLite: {average:.2f}"
+        f"Study Average from SQLite: {average:.2f}"
+    )
+
+    summary_dashboard = SummaryDashboard()
+
+    summary_dashboard.display(
+        metrics_service.calculate_average(
+            study_hours
+        ),
+        metrics_service.calculate_average(
+            sleep_hours
+        ),
+        storage.get_goal_count(),
+        storage.get_metric_latest_value(
+            "Study Hours"
+        )
     )
 
     app.summary()
