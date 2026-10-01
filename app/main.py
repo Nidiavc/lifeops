@@ -14,6 +14,28 @@ from services.metrics_service import MetricsService
 from database.storage import Storage
 
 
+def display_metric_history(
+    storage,
+    metric_name
+):
+    print(f"\n{metric_name.upper()} HISTORY")
+    print("======================")
+
+    history = storage.get_metric_history(
+        metric_name
+    )
+
+    if not history:
+        print("No dated records available.")
+        return
+
+    for entry_date, average_value in history:
+        print(
+            f"{entry_date} -> "
+            f"{average_value:.2f}"
+        )
+
+
 def main():
     print("=== LifeOps ===")
 
@@ -44,29 +66,19 @@ def main():
         "Hours"
     )
 
-    study_hours.add_entry(3)
-    storage.save_metric_entry(
-        "Study Hours",
-        3,
-        today
-    )
-
-    study_hours.add_entry(5)
-    storage.save_metric_entry(
-        "Study Hours",
-        5,
-        today
-    )
-
-    study_hours.add_entry(2)
-    storage.save_metric_entry(
-        "Study Hours",
-        2,
-        today
-    )
-
     app.add_metric(study_hours)
     storage.save_metric(study_hours)
+
+    study_values = [3, 5, 2]
+
+    for value in study_values:
+        study_hours.add_entry(value)
+
+        storage.save_metric_entry(
+            "Study Hours",
+            value,
+            today
+        )
 
     # -------------------------
     # SLEEP HOURS
@@ -77,29 +89,19 @@ def main():
         "Hours"
     )
 
-    sleep_hours.add_entry(7)
-    storage.save_metric_entry(
-        "Sleep Hours",
-        7,
-        today
-    )
-
-    sleep_hours.add_entry(8)
-    storage.save_metric_entry(
-        "Sleep Hours",
-        8,
-        today
-    )
-
-    sleep_hours.add_entry(6)
-    storage.save_metric_entry(
-        "Sleep Hours",
-        6,
-        today
-    )
-
     app.add_metric(sleep_hours)
     storage.save_metric(sleep_hours)
+
+    sleep_values = [7, 8, 6]
+
+    for value in sleep_values:
+        sleep_hours.add_entry(value)
+
+        storage.save_metric_entry(
+            "Sleep Hours",
+            value,
+            today
+        )
 
     # -------------------------
     # SAVINGS
@@ -110,29 +112,23 @@ def main():
         "CLP"
     )
 
-    savings.add_entry(100000)
-    storage.save_metric_entry(
-        "Savings",
-        100000,
-        today
-    )
-
-    savings.add_entry(150000)
-    storage.save_metric_entry(
-        "Savings",
-        150000,
-        today
-    )
-
-    savings.add_entry(200000)
-    storage.save_metric_entry(
-        "Savings",
-        200000,
-        today
-    )
-
     app.add_metric(savings)
     storage.save_metric(savings)
+
+    savings_values = [
+        100000,
+        150000,
+        200000
+    ]
+
+    for value in savings_values:
+        savings.add_entry(value)
+
+        storage.save_metric_entry(
+            "Savings",
+            value,
+            today
+        )
 
     # -------------------------
     # EVENT
@@ -158,7 +154,7 @@ def main():
     storage.save_goal(power_bi_goal)
 
     # -------------------------
-    # METRIC ENTRY
+    # METRIC ENTRY EXAMPLE
     # -------------------------
 
     study_entry = MetricEntry(
@@ -167,7 +163,7 @@ def main():
     )
 
     # -------------------------
-    # OUTPUT
+    # GENERAL OUTPUT
     # -------------------------
 
     print(f"\nEntry date: {today}")
@@ -205,127 +201,183 @@ def main():
 
     study_entry.display()
 
+    # -------------------------
+    # SERVICES
+    # -------------------------
+
     metrics_service = MetricsService()
     dashboard = Dashboard()
 
-    print("\nDASHBOARD")
+    # -------------------------
+    # DASHBOARDS
+    # -------------------------
+
+    print("\nDASHBOARDS")
     print("======================")
 
     dashboard.display(study_hours)
     dashboard.display(sleep_hours)
     dashboard.display(savings)
 
+    # -------------------------
+    # MEMORY STATISTICS
+    # -------------------------
+
     print("\nMETRIC STATISTICS")
     print("======================")
 
     print(
-        f"Study Average: "
+        "Study Average: "
         f"{metrics_service.calculate_average(study_hours):.2f}"
     )
 
     print(
-        f"Sleep Average: "
+        "Sleep Average: "
         f"{metrics_service.calculate_average(sleep_hours):.2f}"
     )
 
     print(
-        f"Savings Average: "
+        "Savings Average: "
         f"{metrics_service.calculate_average(savings):.2f}"
     )
 
-    print("\nDATABASE")
+    # -------------------------
+    # DATABASE DATA
+    # -------------------------
+
+    print("\nDATABASE METRICS")
     print("======================")
 
     storage.show_metrics()
 
-    print("\nMETRIC ENTRIES")
+    print("\nDATABASE METRIC ENTRIES")
     print("======================")
 
     storage.show_metric_entries()
 
-    print("\nGOALS")
+    print("\nDATABASE GOALS")
     print("======================")
 
     storage.show_goals()
+
+    # -------------------------
+    # GOAL STATISTICS
+    # -------------------------
 
     print("\nGOAL STATISTICS")
     print("======================")
 
     print(
-        f"Average Goal Progress: "
+        "Average Goal Progress: "
         f"{storage.get_goal_average_progress():.2f}"
     )
 
     print(
-        f"Goal Count: "
+        "Goal Count: "
         f"{storage.get_goal_count()}"
     )
 
     print(
-        f"Max Goal Progress: "
+        "Max Goal Progress: "
         f"{storage.get_goal_max_progress()}"
     )
 
     print(
-        f"Min Goal Progress: "
+        "Min Goal Progress: "
         f"{storage.get_goal_min_progress()}"
     )
 
-    print("\nLATEST METRIC VALUE")
+    # -------------------------
+    # LATEST VALUE
+    # -------------------------
+
+    print("\nLATEST METRIC VALUES")
     print("======================")
 
-    latest_value = storage.get_metric_latest_value(
-        "Study Hours"
+    print(
+        "Latest Study Value: "
+        f"{storage.get_metric_latest_value('Study Hours')}"
     )
 
     print(
-        f"Last Recorded Study Value: {latest_value}"
-    )
-
-    print("\nSQL AVERAGE")
-    print("======================")
-
-    study_average = storage.get_metric_average(
-        "Study Hours"
+        "Latest Sleep Value: "
+        f"{storage.get_metric_latest_value('Sleep Hours')}"
     )
 
     print(
-        f"Study Average from SQLite: "
-        f"{study_average:.2f}"
+        "Latest Savings Value: "
+        f"{storage.get_metric_latest_value('Savings')}"
     )
+
+    # -------------------------
+    # SQL AVERAGES
+    # -------------------------
+
+    print("\nSQL AVERAGES")
+    print("======================")
+
+    print(
+        "Study Average from SQLite: "
+        f"{storage.get_metric_average('Study Hours'):.2f}"
+    )
+
+    print(
+        "Sleep Average from SQLite: "
+        f"{storage.get_metric_average('Sleep Hours'):.2f}"
+    )
+
+    print(
+        "Savings Average from SQLite: "
+        f"{storage.get_metric_average('Savings'):.2f}"
+    )
+
+    # -------------------------
+    # TODAY'S SQL AVERAGES
+    # -------------------------
 
     print("\nTODAY'S SQL AVERAGES")
     print("======================")
 
-    study_today_average = storage.get_metric_average_by_date(
-        "Study Hours",
-        today
-    )
-
-    sleep_today_average = storage.get_metric_average_by_date(
-        "Sleep Hours",
-        today
-    )
-
-    savings_today_average = storage.get_metric_average_by_date(
-        "Savings",
-        today
+    print(
+        "Study Average Today: "
+        f"{storage.get_metric_average_by_date('Study Hours', today):.2f}"
     )
 
     print(
-        f"Study Average Today: "
-        f"{study_today_average:.2f}"
+        "Sleep Average Today: "
+        f"{storage.get_metric_average_by_date('Sleep Hours', today):.2f}"
     )
 
     print(
-        f"Sleep Average Today: "
-        f"{sleep_today_average:.2f}"
+        "Savings Average Today: "
+        f"{storage.get_metric_average_by_date('Savings', today):.2f}"
     )
 
-    print(
-        f"Savings Average Today: "
-        f"{savings_today_average:.2f}"
+    # -------------------------
+    # TEMPORAL HISTORY
+    # -------------------------
+
+    print("\nMETRIC HISTORY")
+    print("======================")
+
+    display_metric_history(
+        storage,
+        "Study Hours"
     )
+
+    display_metric_history(
+        storage,
+        "Sleep Hours"
+    )
+
+    display_metric_history(
+        storage,
+        "Savings"
+    )
+
+    # -------------------------
+    # SUMMARY DASHBOARD
+    # -------------------------
 
     summary_dashboard = SummaryDashboard()
 
