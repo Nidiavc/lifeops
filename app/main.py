@@ -14,7 +14,7 @@ from services.metrics_service import MetricsService
 from services.trend_service import TrendService
 from services.insights_service import InsightsService
 from services.weekly_analytics_service import WeeklyAnalyticsService
-
+from services.chart_service import ChartService
 from database.storage import Storage
 
 
@@ -273,11 +273,8 @@ def main():
         metrics_service = MetricsService()
         trend_service = TrendService()
         insights_service = InsightsService()
-
-        weekly_analytics_service = (
-            WeeklyAnalyticsService()
-        )
-
+        weekly_analytics_service = WeeklyAnalyticsService()
+        chart_service = ChartService()
         dashboard = Dashboard()
 
         # ==========================
@@ -611,6 +608,24 @@ def main():
             storage.get_metric_history(
                 "Savings"
             )
+        )
+        # ==========================
+        # CHART GENERATION
+        # ==========================
+
+        chart_service.create_history_chart(
+            "Study Hours",
+            study_history
+        )
+
+        chart_service.create_history_chart(
+            "Sleep Hours",
+            sleep_history
+        )
+
+        chart_service.create_history_chart(
+            "Savings",
+            savings_history
         )
 
         # ==========================
