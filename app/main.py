@@ -13,6 +13,7 @@ from services.lifeops_app import LifeOpsApp
 from services.metrics_service import MetricsService
 from services.trend_service import TrendService
 from services.insights_service import InsightsService
+from services.weekly_analytics_service import WeeklyAnalyticsService
 
 from database.storage import Storage
 
@@ -21,7 +22,9 @@ def display_metric_history(
     storage,
     metric_name
 ):
-    print(f"\n{metric_name.upper()} HISTORY")
+    print(
+        f"\n{metric_name.upper()} HISTORY"
+    )
     print("======================")
 
     history = storage.get_metric_history(
@@ -29,7 +32,9 @@ def display_metric_history(
     )
 
     if not history:
-        print("No dated records available.")
+        print(
+            "No dated records available."
+        )
         return
 
     for entry_date, average_value in history:
@@ -61,11 +66,13 @@ def main():
     print("=== LifeOps ===")
 
     today = date.today()
+
     previous_day = today - timedelta(
         days=1
     )
 
     today_text = today.isoformat()
+
     previous_day_text = (
         previous_day.isoformat()
     )
@@ -266,6 +273,11 @@ def main():
         metrics_service = MetricsService()
         trend_service = TrendService()
         insights_service = InsightsService()
+
+        weekly_analytics_service = (
+            WeeklyAnalyticsService()
+        )
+
         dashboard = Dashboard()
 
         # ==========================
@@ -668,10 +680,34 @@ def main():
         )
 
         # ==========================
+        # WEEKLY ANALYTICS
+        # ==========================
+
+        print("\nWEEKLY ANALYTICS")
+        print("======================")
+
+        weekly_analytics_service.display(
+            "Study Hours",
+            study_history
+        )
+
+        weekly_analytics_service.display(
+            "Sleep Hours",
+            sleep_history
+        )
+
+        weekly_analytics_service.display(
+            "Savings",
+            savings_history
+        )
+
+        # ==========================
         # SUMMARY DASHBOARD
         # ==========================
 
-        summary_dashboard = SummaryDashboard()
+        summary_dashboard = (
+            SummaryDashboard()
+        )
 
         summary_dashboard.display(
             study_memory_average,
