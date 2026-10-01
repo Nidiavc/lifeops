@@ -76,6 +76,28 @@ def main():
     storage.save_metric(sleep_hours)
 
     # -------------------------
+    # SAVINGS
+    # -------------------------
+
+    savings = Metric(
+        "Savings",
+        "CLP"
+    )
+
+    savings.add_entry(100000)
+    storage.save_metric_entry("Savings", 100000)
+
+    savings.add_entry(150000)
+    storage.save_metric_entry("Savings", 150000)
+
+    savings.add_entry(200000)
+    storage.save_metric_entry("Savings", 200000)
+
+    app.add_metric(savings)
+
+    storage.save_metric(savings)
+
+    # -------------------------
     # EVENT
     # -------------------------
 
@@ -128,6 +150,10 @@ def main():
 
     sleep_hours.display()
 
+    print()
+
+    savings.display()
+
     print("\nEVENT")
     print("======================")
 
@@ -154,6 +180,8 @@ def main():
 
     dashboard.display(sleep_hours)
 
+    dashboard.display(savings)
+
     print("\nMETRIC STATISTICS")
     print("======================")
 
@@ -165,6 +193,11 @@ def main():
     print(
         f"Sleep Average: "
         f"{metrics_service.calculate_average(sleep_hours):.2f}"
+    )
+
+    print(
+        f"Savings Average: "
+        f"{metrics_service.calculate_average(savings):.2f}"
     )
 
     print("\nDATABASE")
@@ -230,18 +263,20 @@ def main():
     summary_dashboard = SummaryDashboard()
 
     summary_dashboard.display(
-metrics_service.calculate_average(
-study_hours
-),
-metrics_service.calculate_average(
-sleep_hours
-),
-0,
-storage.get_goal_count(),
-storage.get_metric_latest_value(
-"Study Hours"
-)
-)
+        metrics_service.calculate_average(
+            study_hours
+        ),
+        metrics_service.calculate_average(
+            sleep_hours
+        ),
+        metrics_service.calculate_average(
+            savings
+        ),
+        storage.get_goal_count(),
+        storage.get_metric_latest_value(
+            "Study Hours"
+        )
+    )
 
     app.summary()
 
