@@ -11,6 +11,10 @@ class Storage:
         self.connection = sqlite3.connect(database_path)
         self.cursor = self.connection.cursor()
 
+        self.cursor.execute(
+            "PRAGMA foreign_keys = ON"
+        )
+
     def create_tables(self):
 
         self.cursor.execute("""
@@ -26,7 +30,8 @@ class Storage:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             metric_name TEXT,
             value REAL,
-            entry_date TEXT
+            entry_date TEXT,
+            metric_id INTEGER
         )
         """)
 
@@ -41,17 +46,29 @@ class Storage:
         self.connection.commit()
 
         self.ensure_entry_date_column()
+        self.ensure_metric_id_column()
+        self.backfill_metric_ids()
 
-    def ensure_entry_date_column(self):
+    # ==========================
+    # DATABASE MIGRATION
+    # ==========================
+
+    def get_table_columns(self, table_name):
 
         columns = self.cursor.execute(
-            "PRAGMA table_info(metric_entries)"
+            f"PRAGMA table_info({table_name})"
         ).fetchall()
 
-        column_names = [
+        return [
             column[1]
             for column in columns
         ]
+
+    def ensure_entry_date_column(self):
+
+        column_names = self.get_table_columns(
+            "metric_entries"
+        )
 
         if "entry_date" not in column_names:
             self.cursor.execute("""
@@ -61,7 +78,66 @@ class Storage:
 
             self.connection.commit()
 
-            print("Column entry_date added to metric_entries.")
+            print(
+                "Column entry_date added "
+                "to metric_entries."
+            )
+
+    def ensure_metric_id_column(self):
+
+        column_names = self.get_table_columns(
+            "metric_entries"
+        )
+
+        if "metric_id" not in column_names:
+            self.cursor.execute("""
+            ALTER TABLE metric_entries
+            ADD COLUMN metric_id INTEGER
+            """)
+
+            self.connection.commit()
+
+            print(
+                "Column metric_id added "
+                "to metric_entries."
+            )
+
+    def backfill_metric_ids(self):
+
+        self.cursor.execute("""
+        UPDATE metric_entries
+        SET metric_id = (
+            SELECT MIN(metrics.id)
+            FROM metrics
+            WHERE metrics.name =
+                  metric_entries.metric_name
+        )
+        WHERE metric_id IS NULL
+        """)
+
+        self.connection.commit()
+
+    # ==========================
+    # METRIC LOOKUP
+    # ==========================
+
+    def get_metric_id(self, metric_name):
+
+        result = self.cursor.execute(
+            """
+            SELECT MIN(id)
+            FROM metrics
+            WHERE name = ?
+            """,
+            (metric_name,)
+        )
+
+        row = result.fetchone()
+
+        if row and row[0] is not None:
+            return row[0]
+
+        return None
 
     # ==========================
     # EXISTS
@@ -69,16 +145,9 @@ class Storage:
 
     def metric_exists(self, metric_name):
 
-        result = self.cursor.execute(
-            """
-            SELECT COUNT(*)
-            FROM metrics
-            WHERE name = ?
-            """,
-            (metric_name,)
-        )
-
-        return result.fetchone()[0] > 0
+        return self.get_metric_id(
+            metric_name
+        ) is not None
 
     def goal_exists(self, title):
 
@@ -95,7 +164,7 @@ class Storage:
 
     def metric_entry_exists(
         self,
-        metric_name,
+        metric_id,
         value,
         entry_date
     ):
@@ -104,12 +173,12 @@ class Storage:
             """
             SELECT COUNT(*)
             FROM metric_entries
-            WHERE metric_name = ?
+            WHERE metric_id = ?
             AND value = ?
             AND entry_date = ?
             """,
             (
-                metric_name,
+                metric_id,
                 value,
                 entry_date
             )
@@ -124,7 +193,9 @@ class Storage:
     def save_metric(self, metric):
 
         if self.metric_exists(metric.name):
-            return
+            return self.get_metric_id(
+                metric.name
+            )
 
         self.cursor.execute(
             """
@@ -141,6 +212,8 @@ class Storage:
 
         print(f"Metric saved: {metric.name}")
 
+        return self.cursor.lastrowid
+
     def save_metric_entry(
         self,
         metric_name,
@@ -148,8 +221,17 @@ class Storage:
         entry_date
     ):
 
+        metric_id = self.get_metric_id(
+            metric_name
+        )
+
+        if metric_id is None:
+            raise ValueError(
+                f"Metric not found: {metric_name}"
+            )
+
         if self.metric_entry_exists(
-            metric_name,
+            metric_id,
             value,
             entry_date
         ):
@@ -158,13 +240,15 @@ class Storage:
         self.cursor.execute(
             """
             INSERT INTO metric_entries(
+                metric_id,
                 metric_name,
                 value,
                 entry_date
             )
-            VALUES (?, ?, ?)
+            VALUES (?, ?, ?, ?)
             """,
             (
+                metric_id,
                 metric_name,
                 value,
                 entry_date
@@ -215,12 +299,16 @@ class Storage:
         results = self.cursor.execute(
             """
             SELECT
-                id,
-                metric_name,
-                value,
-                entry_date
+                metric_entries.id,
+                metric_entries.metric_id,
+                metrics.name,
+                metric_entries.value,
+                metric_entries.entry_date
             FROM metric_entries
-            ORDER BY id
+            LEFT JOIN metrics
+                ON metrics.id =
+                   metric_entries.metric_id
+            ORDER BY metric_entries.id
             """
         )
 
@@ -246,136 +334,23 @@ class Storage:
 
     def get_metric_average(self, metric_name):
 
-        result = self.cursor.execute(
-            """
-            SELECT AVG(value)
-            FROM metric_entries
-            WHERE metric_name = ?
-            """,
-            (metric_name,)
+        metric_id = self.get_metric_id(
+            metric_name
         )
 
-        average = result.fetchone()[0]
-
-        if average is None:
+        if metric_id is None:
             return 0
-
-        return average
-
-    def get_metric_latest_value(self, metric_name):
-
-        result = self.cursor.execute(
-            """
-            SELECT value
-            FROM metric_entries
-            WHERE metric_name = ?
-            ORDER BY
-                CASE
-                    WHEN entry_date IS NULL THEN 1
-                    ELSE 0
-                END,
-                entry_date DESC,
-                id DESC
-            LIMIT 1
-            """,
-            (metric_name,)
-        )
-
-        row = result.fetchone()
-
-        if row:
-            return row[0]
-
-        return 0
-
-    def get_metric_average_by_date(
-        self,
-        metric_name,
-        entry_date
-    ):
 
         result = self.cursor.execute(
             """
             SELECT AVG(value)
             FROM metric_entries
-            WHERE metric_name = ?
-            AND entry_date = ?
+            WHERE metric_id = ?
             """,
-            (
-                metric_name,
-                entry_date
-            )
+            (metric_id,)
         )
 
         average = result.fetchone()[0]
 
         if average is None:
-            return 0
-
-        return average
-
-    # ==========================
-    # GOAL STATISTICS
-    # ==========================
-
-    def get_goal_average_progress(self):
-
-        result = self.cursor.execute(
-            """
-            SELECT AVG(progress)
-            FROM goals
-            """
-        )
-
-        average = result.fetchone()[0]
-
-        if average is None:
-            return 0
-
-        return average
-
-    def get_goal_count(self):
-
-        result = self.cursor.execute(
-            """
-            SELECT COUNT(*)
-            FROM goals
-            """
-        )
-
-        return result.fetchone()[0]
-
-    def get_goal_max_progress(self):
-
-        result = self.cursor.execute(
-            """
-            SELECT MAX(progress)
-            FROM goals
-            """
-        )
-
-        maximum = result.fetchone()[0]
-
-        if maximum is None:
-            return 0
-
-        return maximum
-
-    def get_goal_min_progress(self):
-
-        result = self.cursor.execute(
-            """
-            SELECT MIN(progress)
-            FROM goals
-            """
-        )
-
-        minimum = result.fetchone()[0]
-
-        if minimum is None:
-            return 0
-
-        return minimum
-
-    def close(self):
-        self.connection.close()
+            return
