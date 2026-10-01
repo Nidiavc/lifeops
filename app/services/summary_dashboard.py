@@ -4,6 +4,7 @@ class SummaryDashboard:
         self,
         study_average,
         sleep_average,
+        savings_average,
         goal_count,
         latest_value
     ):
@@ -17,6 +18,10 @@ class SummaryDashboard:
 
         print(
             f"Sleep Hours Average..... {sleep_average:.2f}"
+        )
+
+        print(
+            f"Savings Average......... {savings_average:.2f}"
         )
 
         print(

@@ -230,17 +230,18 @@ def main():
     summary_dashboard = SummaryDashboard()
 
     summary_dashboard.display(
-        metrics_service.calculate_average(
-            study_hours
-        ),
-        metrics_service.calculate_average(
-            sleep_hours
-        ),
-        storage.get_goal_count(),
-        storage.get_metric_latest_value(
-            "Study Hours"
-        )
-    )
+metrics_service.calculate_average(
+study_hours
+),
+metrics_service.calculate_average(
+sleep_hours
+),
+0,
+storage.get_goal_count(),
+storage.get_metric_latest_value(
+"Study Hours"
+)
+)
 
     app.summary()
 
