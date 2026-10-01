@@ -12,6 +12,7 @@ from services.summary_dashboard import SummaryDashboard
 from services.lifeops_app import LifeOpsApp
 from services.metrics_service import MetricsService
 from services.trend_service import TrendService
+from services.insights_service import InsightsService
 
 from database.storage import Storage
 
@@ -264,6 +265,7 @@ def main():
 
         metrics_service = MetricsService()
         trend_service = TrendService()
+        insights_service = InsightsService()
         dashboard = Dashboard()
 
         # ==========================
@@ -578,6 +580,28 @@ def main():
         )
 
         # ==========================
+        # HISTORICAL DATA
+        # ==========================
+
+        study_history = (
+            storage.get_metric_history(
+                "Study Hours"
+            )
+        )
+
+        sleep_history = (
+            storage.get_metric_history(
+                "Sleep Hours"
+            )
+        )
+
+        savings_history = (
+            storage.get_metric_history(
+                "Savings"
+            )
+        )
+
+        # ==========================
         # TEMPORAL HISTORY
         # ==========================
 
@@ -606,24 +630,6 @@ def main():
         print("\nMETRIC TRENDS")
         print("======================")
 
-        study_history = (
-            storage.get_metric_history(
-                "Study Hours"
-            )
-        )
-
-        sleep_history = (
-            storage.get_metric_history(
-                "Sleep Hours"
-            )
-        )
-
-        savings_history = (
-            storage.get_metric_history(
-                "Savings"
-            )
-        )
-
         trend_service.display(
             "Study Hours",
             study_history
@@ -640,12 +646,32 @@ def main():
         )
 
         # ==========================
+        # INSIGHTS
+        # ==========================
+
+        print("\nMETRIC INSIGHTS")
+        print("======================")
+
+        insights_service.display(
+            "Study Hours",
+            study_history
+        )
+
+        insights_service.display(
+            "Sleep Hours",
+            sleep_history
+        )
+
+        insights_service.display(
+            "Savings",
+            savings_history
+        )
+
+        # ==========================
         # SUMMARY DASHBOARD
         # ==========================
 
-        summary_dashboard = (
-            SummaryDashboard()
-        )
+        summary_dashboard = SummaryDashboard()
 
         summary_dashboard.display(
             study_memory_average,
