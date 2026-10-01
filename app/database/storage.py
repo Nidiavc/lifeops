@@ -1,10 +1,14 @@
 import sqlite3
+from pathlib import Path
 
 
 class Storage:
 
     def __init__(self):
-        self.connection = sqlite3.connect("lifeops.db")
+        app_directory = Path(__file__).resolve().parents[1]
+        database_path = app_directory / "lifeops.db"
+
+        self.connection = sqlite3.connect(database_path)
         self.cursor = self.connection.cursor()
 
     def create_tables(self):
@@ -21,7 +25,8 @@ class Storage:
         CREATE TABLE IF NOT EXISTS metric_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             metric_name TEXT,
-            value REAL
+            value REAL,
+            entry_date TEXT
         )
         """)
 
@@ -34,6 +39,29 @@ class Storage:
         """)
 
         self.connection.commit()
+
+        self.ensure_entry_date_column()
+
+    def ensure_entry_date_column(self):
+
+        columns = self.cursor.execute(
+            "PRAGMA table_info(metric_entries)"
+        ).fetchall()
+
+        column_names = [
+            column[1]
+            for column in columns
+        ]
+
+        if "entry_date" not in column_names:
+            self.cursor.execute("""
+            ALTER TABLE metric_entries
+            ADD COLUMN entry_date TEXT
+            """)
+
+            self.connection.commit()
+
+            print("Column entry_date added to metric_entries.")
 
     # ==========================
     # EXISTS
@@ -68,7 +96,8 @@ class Storage:
     def metric_entry_exists(
         self,
         metric_name,
-        value
+        value,
+        entry_date
     ):
 
         result = self.cursor.execute(
@@ -77,10 +106,12 @@ class Storage:
             FROM metric_entries
             WHERE metric_name = ?
             AND value = ?
+            AND entry_date = ?
             """,
             (
                 metric_name,
-                value
+                value,
+                entry_date
             )
         )
 
@@ -100,7 +131,10 @@ class Storage:
             INSERT INTO metrics(name, unit)
             VALUES (?, ?)
             """,
-            (metric.name, metric.unit)
+            (
+                metric.name,
+                metric.unit
+            )
         )
 
         self.connection.commit()
@@ -110,12 +144,14 @@ class Storage:
     def save_metric_entry(
         self,
         metric_name,
-        value
+        value,
+        entry_date
     ):
 
         if self.metric_entry_exists(
             metric_name,
-            value
+            value,
+            entry_date
         ):
             return
 
@@ -123,13 +159,15 @@ class Storage:
             """
             INSERT INTO metric_entries(
                 metric_name,
-                value
+                value,
+                entry_date
             )
-            VALUES (?, ?)
+            VALUES (?, ?, ?)
             """,
             (
                 metric_name,
-                value
+                value,
+                entry_date
             )
         )
 
@@ -145,7 +183,10 @@ class Storage:
             INSERT INTO goals(title, progress)
             VALUES (?, ?)
             """,
-            (goal.title, goal.progress)
+            (
+                goal.title,
+                goal.progress
+            )
         )
 
         self.connection.commit()
@@ -159,7 +200,11 @@ class Storage:
     def show_metrics(self):
 
         results = self.cursor.execute(
-            "SELECT * FROM metrics"
+            """
+            SELECT id, name, unit
+            FROM metrics
+            ORDER BY id
+            """
         )
 
         for row in results:
@@ -168,7 +213,15 @@ class Storage:
     def show_metric_entries(self):
 
         results = self.cursor.execute(
-            "SELECT * FROM metric_entries"
+            """
+            SELECT
+                id,
+                metric_name,
+                value,
+                entry_date
+            FROM metric_entries
+            ORDER BY id
+            """
         )
 
         for row in results:
@@ -177,14 +230,18 @@ class Storage:
     def show_goals(self):
 
         results = self.cursor.execute(
-            "SELECT * FROM goals"
+            """
+            SELECT id, title, progress
+            FROM goals
+            ORDER BY id
+            """
         )
 
         for row in results:
             print(row)
 
     # ==========================
-    # METRIC STATS
+    # METRIC STATISTICS
     # ==========================
 
     def get_metric_average(self, metric_name):
@@ -198,7 +255,12 @@ class Storage:
             (metric_name,)
         )
 
-        return result.fetchone()[0]
+        average = result.fetchone()[0]
+
+        if average is None:
+            return 0
+
+        return average
 
     def get_metric_latest_value(self, metric_name):
 
@@ -207,7 +269,13 @@ class Storage:
             SELECT value
             FROM metric_entries
             WHERE metric_name = ?
-            ORDER BY id DESC
+            ORDER BY
+                CASE
+                    WHEN entry_date IS NULL THEN 1
+                    ELSE 0
+                END,
+                entry_date DESC,
+                id DESC
             LIMIT 1
             """,
             (metric_name,)
@@ -220,8 +288,34 @@ class Storage:
 
         return 0
 
+    def get_metric_average_by_date(
+        self,
+        metric_name,
+        entry_date
+    ):
+
+        result = self.cursor.execute(
+            """
+            SELECT AVG(value)
+            FROM metric_entries
+            WHERE metric_name = ?
+            AND entry_date = ?
+            """,
+            (
+                metric_name,
+                entry_date
+            )
+        )
+
+        average = result.fetchone()[0]
+
+        if average is None:
+            return 0
+
+        return average
+
     # ==========================
-    # GOAL STATS
+    # GOAL STATISTICS
     # ==========================
 
     def get_goal_average_progress(self):
@@ -233,7 +327,12 @@ class Storage:
             """
         )
 
-        return result.fetchone()[0]
+        average = result.fetchone()[0]
+
+        if average is None:
+            return 0
+
+        return average
 
     def get_goal_count(self):
 
@@ -255,7 +354,12 @@ class Storage:
             """
         )
 
-        return result.fetchone()[0]
+        maximum = result.fetchone()[0]
+
+        if maximum is None:
+            return 0
+
+        return maximum
 
     def get_goal_min_progress(self):
 
@@ -266,4 +370,12 @@ class Storage:
             """
         )
 
-        return result.fetchone()[0]
+        minimum = result.fetchone()[0]
+
+        if minimum is None:
+            return 0
+
+        return minimum
+
+    def close(self):
+        self.connection.close()
